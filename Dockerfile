@@ -1,9 +1,27 @@
-FROM eclipse-temurin:21-jdk
+# Etapa 1: compilar el proyecto
+FROM eclipse-temurin:21-jdk AS builder
 
 WORKDIR /app
 
-COPY target/payment-service-0.0.1-SNAPSHOT.jar payment-service.jar
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+
+RUN chmod +x mvnw
+
+RUN ./mvnw dependency:go-offline
+
+COPY src/ src/
+
+RUN ./mvnw clean package -DskipTests
+
+
+# Etapa 2: ejecutar el microservicio
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+COPY --from=builder /app/target/*.jar application.jar
 
 EXPOSE 8084
 
-ENTRYPOINT ["java", "-jar", "payment-service.jar"]
+ENTRYPOINT ["java", "-jar", "application.jar"]
